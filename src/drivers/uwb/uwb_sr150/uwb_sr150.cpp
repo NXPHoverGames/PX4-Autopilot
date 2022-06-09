@@ -65,6 +65,7 @@
 
 const uint8_t CMD_RANGING_STOP[UWB_CMD_LEN ] = {UWB_CMD, 0x00, 0x02, UWB_DRONE_CTL, UWB_CMD_STOP};
 const uint8_t CMD_RANGING_START[UWB_CMD_LEN ] = {UWB_CMD, 0x00, 0x02, UWB_DRONE_CTL, UWB_CMD_START};
+const uint8_t CMD_FOLLOWME_START[UWB_CMD_LEN ] = {UWB_CMD, 0x00, 0x02, UWB_SUBCMD_FOLLOW_ME, UWB_CMD_START};
 const uint8_t CMD_APP_START[UWB_CMD_LEN ] = {0x01, 0x00, 0x02, UWB_APP_START, UWB_PRECNAV_APP};
 const uint8_t CMD_APP_STOP[0x04 ] = {0x01, 0x00, 0x01, UWB_APP_STOP};
 
@@ -120,6 +121,8 @@ void UWB_SR150::run()
 {
 	// Subscribe to parameter_update message
 	parameters_update();
+	param_timestamp = hrt_absolute_time();
+	_uwb_mode = _uwb_mode_p.get();
 
 	//TODO replace with BLE grid configuration
 	grid_info_read(&_uwb_grid_info.target_pos);
@@ -299,6 +302,14 @@ UWB_SR150 *UWB_SR150::instantiate(int argc, char *argv[])
 
 int UWB_SR150::distance()
 {
+
+	if (hrt_elapsed_time(&param_timestamp) > 1000_ms) {
+		parameters_update();
+		param_timestamp = hrt_absolute_time();
+	}
+
+
+
 	_uwb_init_offset_v3f = matrix::Vector3f(_uwb_init_off_x.get(), _uwb_init_off_y.get(),
 						_uwb_init_off_z.get()); //set offset at the start
 	uint8_t *buffer = (uint8_t *) &_distance_result_msg;
@@ -368,50 +379,59 @@ int UWB_SR150::distance()
 		_uwb_distance.time_offset = _distance_result_msg.range_interval;
 
 		for (int i = 0; i < 4; i++) {
+			// if(_distance_result_msg.measurements[i].status == 0){ }else{}
 			_uwb_distance.anchor_distance[i] = _distance_result_msg.measurements[i].distance;
 			_uwb_distance.nlos[i] = _distance_result_msg.measurements[i].nLos;
-			_uwb_distance.aoafirst[i] = float(_distance_result_msg.measurements[i].aoaFirst) /
-						    128; // Angle of Arrival has Format Q9.7; dividing by 2^7 results in the correct value
+			_uwb_distance.aoa_azimuth_dev[i] = - double(_distance_result_msg.measurements[i].aoa_azimuth_dev) /
+							   128; // Angle of Arrival has Format Q9.7; dividing by 2^7 and negating results in the correct value
+			_uwb_distance.aoa_altitude_dev[i] = - double(_distance_result_msg.measurements[i].aoa_altitude_dev) /
+							    128; // Angle of Arrival has Format Q9.7; dividing by 2^7 and negating results in the correct value
 		}
 
-		// Algorithm goes here
-		UWB_POS_ERROR_CODES UWB_POS_ERROR = UWB_SR150::localization();
+		if (_uwb_mode == 1) { // Follow me mode
+			actuator_control(double(_uwb_distance.anchor_distance[0]) / 100, _uwb_distance.aoa_azimuth_dev[0],
+					 _uwb_distance.aoa_altitude_dev[0]);
 
-		_uwb_distance.status = UWB_POS_ERROR;
+		} else if (_uwb_mode == 0) { //precision landing mode
+			// Algorithm goes here
+			UWB_POS_ERROR_CODES UWB_POS_ERROR = UWB_SR150::localization();
 
-		if (UWB_OK == UWB_POS_ERROR) {
+			_uwb_distance.status = UWB_POS_ERROR;
 
-			_uwb_distance.position[0] = _rel_pos(0);
-			_uwb_distance.position[1] = _rel_pos(1);
-			_uwb_distance.position[2] = _rel_pos(2);
+			if (UWB_OK == UWB_POS_ERROR) {
 
-		} else {
-			//only print the error if debug is enabled
-			if (_uwb_pos_debug) {
-				switch (UWB_POS_ERROR) { //UWB POSITION ALGORItHM Errors
-				case UWB_ANC_BELOW_THREE:
-					PX4_INFO("UWB not enough anchors for doing localization");
-					break;
+				_uwb_distance.position[0] = _rel_pos(0);
+				_uwb_distance.position[1] = _rel_pos(1);
+				_uwb_distance.position[2] = _rel_pos(2);
 
-				case UWB_LIN_DEP_FOR_THREE:
-					PX4_INFO("UWB localization: linear dependant with 3 Anchors");
-					break;
+			} else {
+				//only print the error if debug is enabled
+				if (_uwb_pos_debug) {
+					switch (UWB_POS_ERROR) { //UWB POSITION ALGORItHM Errors
+					case UWB_ANC_BELOW_THREE:
+						PX4_INFO("UWB not enough anchors for doing localization");
+						break;
 
-				case UWB_ANC_ON_ONE_LEVEL:
-					PX4_INFO("UWB localization: Anchors are on a X,Y Plane and there are not enought Anchors");
-					break;
+					case UWB_LIN_DEP_FOR_THREE:
+						PX4_INFO("UWB localization: linear dependant with 3 Anchors");
+						break;
 
-				case UWB_LIN_DEP_FOR_FOUR:
-					PX4_INFO("UWB localization: linear dependant with four or more Anchors");
-					break;
+					case UWB_ANC_ON_ONE_LEVEL:
+						PX4_INFO("UWB localization: Anchors are on a X,Y Plane and there are not enought Anchors");
+						break;
 
-				case UWB_RANK_ZERO:
-					PX4_INFO("UWB localization: rank is zero");
-					break;
+					case UWB_LIN_DEP_FOR_FOUR:
+						PX4_INFO("UWB localization: linear dependant with four or more Anchors");
+						break;
 
-				default:
-					PX4_INFO("UWB localization: Unknown failure in Position Algorithm");
-					break;
+					case UWB_RANK_ZERO:
+						PX4_INFO("UWB localization: rank is zero");
+						break;
+
+					default:
+						PX4_INFO("UWB localization: Unknown failure in Position Algorithm");
+						break;
+					}
 				}
 			}
 		}
@@ -432,6 +452,83 @@ int UWB_SR150::distance()
 	return 1;
 }
 
+void UWB_SR150::actuator_control(double distance, double aoa_azimuth, double aoa_altitude)
+{
+	//Param Wrapper, move to update function
+	double follow_distance_max =	_uwb_follow_distance_max.get();
+	double follow_distance = 	_uwb_follow_distance.get();
+	double follow_distance_min =	_uwb_follow_distance_min.get();
+	double throttle_max =		_uwb_throttle.get();
+	double thrust_heading =		_uwb_thrust_head.get(); // heading thrust multiplier
+	double thrust_heading_min =		_uwb_thrust_head_min.get();
+	double thrust_heading_max =		_uwb_thrust_head_max.get();
+	double throttle_reverse =	_uwb_throttle_reverse.get();
+
+	double heading = aoa_azimuth / 70; //normalize the AoA to -1..+1
+	double throttle = 0;
+
+	//simple heading control loop
+	if (aoa_azimuth >= 5) { // Heading deadzone
+		heading = heading * thrust_heading;
+		heading = math::constrain(heading, thrust_heading_min, thrust_heading_max) ; //Limit heading to -1..+1
+
+	} else if (aoa_azimuth <= -5) { // Heading deadzone
+		heading = heading * thrust_heading;
+		heading = math::constrain(heading, -thrust_heading_max, -thrust_heading_min) ;
+
+	} else {
+		heading = 0;
+	}
+
+	//simple Throttle control loop
+	if (distance > follow_distance_max) {
+		throttle = 0;
+
+	} else if (distance <= follow_distance_min) {
+		throttle =	throttle_reverse;
+
+	} else if ((distance >= follow_distance_min) && (distance < follow_distance)) {
+		throttle = 0;
+
+	} else if ((distance >= follow_distance) && (distance < follow_distance_max)) {
+		throttle = (distance - follow_distance) / 2; //Throttle will reach 100 over 2 meters
+
+	}
+
+	throttle = math::constrain(throttle, -throttle_max, throttle_max); //limit throttle to -1..1
+
+	offboard_control_mode_s offboard_control_mode{}; //publish offboard control mode to enable it
+	offboard_control_mode.timestamp = hrt_absolute_time();
+	offboard_control_mode.actuator = true;
+	_offboard_control_mode_pub.publish(offboard_control_mode);
+
+	vehicle_status_s vehicle_status{};
+	_vehicle_status_sub.copy(&vehicle_status);
+
+	// Publish actuator controls only once in OFFBOARD
+	if (vehicle_status.nav_state == vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
+
+		/*
+		vehicle_rates_setpoint_s vehicle_rates_setpoint{};
+		vehicle_rates_setpoint.timestamp = hrt_absolute_time();
+		vehicle_rates_setpoint.roll = heading;
+		vehicle_rates_setpoint.pitch = heading;
+		vehicle_rates_setpoint.yaw = heading;
+		vehicle_rates_setpoint.thrust_body[0] = throttle * max_throttle * timeout;
+		vehicle_rates_setpoint.thrust_body[1] = throttle * max_throttle * timeout;
+		vehicle_rates_setpoint.thrust_body[2] = throttle * max_throttle * timeout;
+		_vehicle_rates_setpoint_pub.publish(vehicle_rates_setpoint);
+		*/
+
+		actuator_controls_s actuator_controls{};
+		actuator_controls.timestamp = hrt_absolute_time();
+		actuator_controls.control[2] = heading; //yaw
+		actuator_controls.control[3] = throttle; //Thrust
+		_actuator_controls_pubs[0].publish(actuator_controls); //flight controls
+	}
+
+}
+
 UWB_POS_ERROR_CODES UWB_SR150::localization()
 {
 // 			WIP
@@ -444,7 +541,6 @@ UWB_POS_ERROR_CODES UWB_SR150::localization()
 	 \verbatim
 	  		    -					-
 	  		   | M_11	M_12	M_13 |	 x	  b[0]
-	  		   | M_12	M_22	M_23 | * y	= b[1]
 	  		   | M_23	M_13	M_33 |	 z	  b[2]
 	  		    -					-
 	 \endverbatim

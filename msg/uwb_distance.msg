@@ -10,6 +10,11 @@ uint16 	status			# status feedback #
 
 uint16[12] anchor_distance	# distance in cm to each UWB Anchor (UWB Device wich takes part in Ranging)
 bool[12] nlos			# Visual line of sight yes/no
-float32[12] aoafirst		# Angle of arrival of first incomming RX msg
 
+#Angle of arrival, Angle in Degree -70..+70
+float32[12] aoa_azimuth_dev	# Angle of arrival of first incomming RX msg
+float32[12] aoa_altitude_dev	# Angle of arrival of first incomming RX msg
+# GPS:
+#GPS position of target_pos of the UWB system
+float32[4] gps_data #Latitude, Longitude, Altitude, and Yaw Offset to True North  #
 float32[3] position		# Position of the Landing point in relation to the Drone (x,y,z in Meters NED)
