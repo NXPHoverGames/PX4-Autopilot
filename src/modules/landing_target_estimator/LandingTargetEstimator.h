@@ -127,7 +127,7 @@ private:
 		param_t offset_x;
 		param_t offset_y;
 		param_t offset_z;
-		param_t sensor_yaw;
+		param_t sensor_rot;
 	} _paramHandle;
 
 	struct {
@@ -141,7 +141,7 @@ private:
 		float offset_x;
 		float offset_y;
 		float offset_z;
-		enum Rotation sensor_yaw;
+		enum Rotation sensor_rot;
 	} _params;
 
 	struct {
@@ -159,18 +159,13 @@ private:
 		(ParamInt<px4::params::LTEST_MODE>)  			_mode,
 		(ParamFloat<px4::params::LTEST_SCALE_X>)  		_scale_x,
 		(ParamFloat<px4::params::LTEST_SCALE_Y>)  		_scale_y,
-		(ParamInt<px4::params::LTEST_SENS_ROT>)  		_sensor_yaw,
+		(ParamInt<px4::params::LTEST_SENS_ROT>)  		_sensor_rot,
 		(ParamFloat<px4::params::LTEST_SENS_POS_X>)  		_offset_x,
 		(ParamFloat<px4::params::LTEST_SENS_POS_Y>)  		_offset_y,
 		(ParamFloat<px4::params::LTEST_SENS_POS_Z>)  		_offset_z
-	)
+	);
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
-
-	// actuator_controls
-	// uORB::Publication<offboard_control_mode_s>_offboard_control_mode_pub{ORB_ID(offboard_control_mode)};
-	// uORB::Publication<actuator_controls_s> _actuator_controls_pubs[4] {ORB_ID(actuator_controls_0), ORB_ID(actuator_controls_1), ORB_ID(actuator_controls_2), ORB_ID(actuator_controls_3)};
-	// uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
 
 	uORB::Subscription _vehicleLocalPositionSub{ORB_ID(vehicle_local_position)};
 	uORB::Subscription _attitudeSub{ORB_ID(vehicle_attitude)};
@@ -207,6 +202,5 @@ private:
 
 	void _update_state();
 
-	// void actuator_control(double distance, double azimuth, double elevation);
 };
 } // namespace landing_target_estimator
