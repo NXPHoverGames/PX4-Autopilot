@@ -39,6 +39,7 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <perf/perf_counter.h>
+#include <lib/conversion/rotation.h>
 
 #include <px4_platform_common/module_params.h>
 #include <px4_platform_common/module.h>
@@ -58,29 +59,29 @@
 using namespace time_literals;
 
 typedef struct {
-	uint8_t MAC[2];					// MAC address of UWB device
+	uint16_t MAC;					// MAC address of UWB device
 	uint8_t status;					// Status of Measurement
 	uint16_t distance; 				// Distance in cm
 	uint8_t nLos; 					// line of sight y/n
-	int16_t aoa_azimuth;			// AOA of incoming msg for Azimuth antenna pairing
-	int16_t aoa_elevation;			// AOA of incoming msg for Altitude antenna pairing
-	int16_t aoa_dest_azimuth;		// AOA destination Azimuth
-	int16_t aoa_dest_elevation; 	// AOA destination elevation
-	uint8_t aoa_azimuth_FOM;		// AOA Azimuth FOM
-	uint8_t aoa_elevation_FOM;		// AOA Elevation FOM
-	uint8_t aoa_dest_azimuth_FOM;	// AOA Azimuth FOM
-	uint8_t aoa_dest_elevation_FOM;	// AOA Elevation FOM
+	int16_t aoa_azimuth;				// AOA of incoming msg for Azimuth antenna pairing
+	int16_t aoa_elevation;				// AOA of incoming msg for Altitude antenna pairing
+	int16_t aoa_dest_azimuth;			// AOA destination Azimuth
+	int16_t aoa_dest_elevation; 			// AOA destination elevation
+	uint8_t aoa_azimuth_FOM;			// AOA Azimuth FOM
+	uint8_t aoa_elevation_FOM;			// AOA Elevation FOM
+	uint8_t aoa_dest_azimuth_FOM;			// AOA Azimuth FOM
+	uint8_t aoa_dest_elevation_FOM;			// AOA Elevation FOM
 } __attribute__((packed)) UWB_range_meas_t;
 
 typedef struct {
-	uint8_t cmd;      			// Should be 0x8E for distance result message
-	uint16_t len; 				// Should be 0x30 for distance result message
-	uint32_t seq_ctr;			// Number of Ranges since last Start of Ranging
-	uint32_t sessionId;			// Session ID of UWB session
-	uint32_t range_interval;	// Time between ranging rounds
-	uint8_t MAC[2];			// MAC address of UWB device
-	UWB_range_meas_t measurements; //Raw anchor_distance distances in CM 2*9
-	uint8_t stop; 		// Should be 0x1B
+	uint8_t cmd;      				// Should be 0x8E for distance result message
+	uint16_t len; 					// Should be 0x30 for distance result message
+	uint32_t seq_ctr;				// Number of Ranges since last Start of Ranging
+	uint32_t sessionId;				// Session ID of UWB session
+	uint32_t range_interval;			// Time between ranging rounds
+	uint16_t MAC;					// MAC address of UWB device
+	UWB_range_meas_t measurements; 			//Raw anchor_distance distances in CM 2*9
+	uint8_t stop; 					// Should be 0x1B
 } __attribute__((packed)) distance_msg_t;
 
 class UWB_SR150 : public ModuleBase<UWB_SR150>, public ModuleParams, public px4::ScheduledWorkItem
@@ -112,33 +113,32 @@ public:
 
 	int collectData();
 
-	int getRotation();
-
 private:
+
 	void parameters_update();
 
 	void Run() override;
 
 	// Publications
 	uORB::Publication<sensor_uwb_s> _sensor_uwb_pub{ORB_ID(sensor_uwb)};
-	sensor_uwb_s _sensor_uwb{};
 
 	// Subscriptions
 	uORB::SubscriptionCallbackWorkItem _sensor_uwb_sub{this, ORB_ID(sensor_uwb)};
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 
+	// Parameters
+	DEFINE_PARAMETERS(
+		(ParamInt<px4::params::UWB_PORT_CFG>) 			_uwb_port_cfg,
+		(ParamFloat<px4::params::UWB_INIT_OFF_X>) 		_offset_x,
+		(ParamFloat<px4::params::UWB_INIT_OFF_Y>) 		_offset_y,
+		(ParamFloat<px4::params::UWB_INIT_OFF_Z>) 		_offset_z,
+		(ParamInt<px4::params::UWB_SENS_ROT>) 			_sensor_rot
+	)
 	// Performance (perf) counters
 	perf_counter_t _read_count_perf;
 	perf_counter_t _read_err_perf;
 
-	// Parameters
-	DEFINE_PARAMETERS(
-		(ParamInt<px4::params::UWB_PORT_CFG>) 			_uwb_port_cfg,
-		(ParamFloat<px4::params::UWB_INIT_OFF_X>) 		_uwb_init_off_x,
-		(ParamFloat<px4::params::UWB_INIT_OFF_Y>) 		_uwb_init_off_y,
-		(ParamFloat<px4::params::UWB_INIT_OFF_Z>) 		_uwb_init_off_z,
-		(ParamInt<px4::params::UWB_SENS_ROT>) 			_uwb_sens_rot
-	)
+	sensor_uwb_s _sensor_uwb{};
 
 	char _port[20] {};
 	hrt_abstime param_timestamp{0};
@@ -150,10 +150,6 @@ private:
 	unsigned _consecutive_fail_count;
 	int _interval{100000};
 
-	distance_msg_t _distance_result_msg{};
-	matrix::Vector3d _rel_pos;
-
-	matrix::Vector3d _uwb_init_offset;
-	matrix::Vector3d _uwb_init_attitude;
+	distance_msg_t 		_distance_result_msg{};
 };
 #endif //PX4_RDDRONE_H

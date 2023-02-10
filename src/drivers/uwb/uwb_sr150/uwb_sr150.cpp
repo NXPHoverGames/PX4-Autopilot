@@ -343,18 +343,37 @@ int UWB_SR150::collectData()
 	if (ok) {
 
 		/* Ranging Message*/
-		_sensor_uwb.timestamp = hrt_absolute_time();
-		_sensor_uwb.counter = _distance_result_msg.seq_ctr;
-		_sensor_uwb.sessionid = _distance_result_msg.sessionId;
-		_sensor_uwb.time_offset = _distance_result_msg.range_interval;
-		_sensor_uwb.distance = double(_distance_result_msg.measurements.distance) / 100;
-		_sensor_uwb.nlos = _distance_result_msg.measurements.nLos;
+		_sensor_uwb.timestamp 		= hrt_absolute_time();
+
+		_sensor_uwb.sessionid 		= _distance_result_msg.sessionId;
+		_sensor_uwb.time_offset 	= _distance_result_msg.range_interval;
+		_sensor_uwb.counter 		= _distance_result_msg.seq_ctr;
+		_sensor_uwb.mac			= _distance_result_msg.MAC;
+
+		_sensor_uwb.mac_dest		= _distance_result_msg.measurements.MAC;
+		_sensor_uwb.status		= _distance_result_msg.measurements.status;
+		_sensor_uwb.nlos 		= _distance_result_msg.measurements.nLos;
+		_sensor_uwb.distance 		= double(_distance_result_msg.measurements.distance) / 100;
+
 
 		/*Angle of Arrival has Format Q9.7; dividing by 2^7 and negating results in the correct value*/
 		_sensor_uwb.aoa_azimuth_dev 	= - double(_distance_result_msg.measurements.aoa_azimuth) / 128;
-		_sensor_uwb.aoa_elevation_dev = - double(_distance_result_msg.measurements.aoa_elevation) / 128;
+		_sensor_uwb.aoa_elevation_dev 	= - double(_distance_result_msg.measurements.aoa_elevation) / 128;
 		_sensor_uwb.aoa_azimuth_resp 	= - double(_distance_result_msg.measurements.aoa_dest_azimuth) / 128;
-		_sensor_uwb.aoa_elevation_resp = - double(_distance_result_msg.measurements.aoa_dest_elevation) / 128;
+		_sensor_uwb.aoa_elevation_resp 	= - double(_distance_result_msg.measurements.aoa_dest_elevation) / 128;
+
+
+		/*Angle of Arrival has Format Q9.7; dividing by 2^7 and negating results in the correct value*/
+		_sensor_uwb.aoa_azimuth_fom 		= - double(_distance_result_msg.measurements.aoa_azimuth) / 128;
+		_sensor_uwb.aoa_elevation_fom 		= - double(_distance_result_msg.measurements.aoa_elevation) / 128;
+		_sensor_uwb.aoa_dest_azimuth_fom	= - double(_distance_result_msg.measurements.aoa_dest_azimuth) / 128;
+		_sensor_uwb.aoa_dest_elevation_fom	= - double(_distance_result_msg.measurements.aoa_dest_elevation) / 128;
+
+		/* Sensor physical offset*/ //for now we propagate the physical configuration via Uorb
+		_sensor_uwb.orientation		= _sensor_rot.get();
+		_sensor_uwb.offset_x		= _offset_x.get();
+		_sensor_uwb.offset_y		= _offset_y.get();
+		_sensor_uwb.offset_z		= _offset_z.get();
 
 		_sensor_uwb_pub.publish(_sensor_uwb);
 
@@ -367,10 +386,4 @@ int UWB_SR150::collectData()
 	}
 
 	return 1;
-}
-
-int UWB_SR150::getRotation()
-{
-	int orientation = _uwb_sens_rot.get();
-	return orientation;
 }
