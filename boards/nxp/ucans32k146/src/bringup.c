@@ -63,6 +63,12 @@
 
 #include "board_config.h"
 
+#include <stdio.h>
+#include <nuttx/spi/spi.h>
+#include <nuttx/leds/apa102.h>
+
+int board_apa102_initialize(int devno, int spino);
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -81,9 +87,45 @@
  *
  ****************************************************************************/
 
+
+int board_apa102_initialize(int devno, int spino)
+{
+  struct spi_dev_s *spi;
+  char devpath[13];
+  int ret;
+
+  spi = px4_spibus_initialize(spino);
+  if (spi == NULL)
+    {
+      return -ENODEV;
+    }
+
+  /* Register the APA102 Driver at the specified location. */
+
+  snprintf(devpath, 13, "/dev/leddrv%d", devno);
+  ret = apa102_register(devpath, spi);
+  if (ret < 0)
+    {
+      lederr("ERROR: apa102_register(%s) failed: %d\n",
+             devpath, ret);
+      return ret;
+    }
+
+  return OK;
+}
+
 int s32k1xx_bringup(void)
 {
 	int ret = OK;
+
+#ifdef CONFIG_LEDS_APA102
+	/* Configure and initialize the APA102 LED Strip. */
+
+	ret = board_apa102_initialize(0, 1);
+	if (ret < 0) {
+		syslog(LOG_ERR, "ERROR: board_apa102_initialize() failed: %d\n", ret);
+	}
+#endif
 
 #ifdef CONFIG_BUTTONS
 	/* Register the BUTTON driver */
