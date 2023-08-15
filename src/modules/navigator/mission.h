@@ -52,7 +52,7 @@
 
 #include <float.h>
 
-#include <dataman/dataman.h>
+#include <dataman_client/DatamanClient.hpp>
 #include <drivers/drv_hrt.h>
 #include <px4_platform_common/module_params.h>
 #include <uORB/Subscription.hpp>
@@ -73,6 +73,11 @@ class Mission : public MissionBlock, public ModuleParams
 public:
 	Mission(Navigator *navigator);
 	~Mission() override = default;
+
+	/**
+	 * @brief function to call regularly to do background work
+	 */
+	void run();
 
 	void on_inactive() override;
 	void on_inactivation() override;
@@ -164,11 +169,6 @@ private:
 	void heading_sp_update();
 
 	/**
-	 * Update the cruising speed setpoint.
-	 */
-	void cruising_speed_sp_update();
-
-	/**
 	 * Abort landing
 	 */
 	void do_abort_landing();
@@ -234,7 +234,7 @@ private:
 	/**
 	 * Return the index of the closest mission item to the current global position.
 	 */
-	int32_t index_closest_mission_item() const;
+	int32_t index_closest_mission_item();
 
 	bool position_setpoint_equal(const position_setpoint_s *p1, const position_setpoint_s *p2) const;
 
@@ -258,17 +258,7 @@ private:
 	 * @param mission_item The mission item to populate
 	 * @return true if successful
 	 */
-	bool getNextPositionMissionItem(const mission_s &mission, int start_index, mission_item_s &mission_item) const;
-
-	/**
-	 * @brief Read the mission item at the given index
-	 *
-	 * @param mission The mission to read from
-	 * @param index The index to read
-	 * @param missionitem The mission item to populate
-	 * @return true if successful
-	 */
-	bool readMissionItemAtIndex(const mission_s &mission, const int index, mission_item_s &missionitem) const;
+	bool getNextPositionMissionItem(const mission_s &mission, int start_index, mission_item_s &mission_item);
 
 	/**
 	 * @brief Cache the mission items containing gimbal, camera mode and trigger commands
@@ -294,6 +284,12 @@ private:
 	 *
 	 */
 	void replayCachedTriggerItems();
+
+	/**
+	 * @brief Replay the cached speed change items and delete them afterwards
+	 *
+	 */
+	void replayCachedSpeedChangeItems();
 
 	/**
 	 * @brief Reset the item cache
@@ -324,6 +320,10 @@ private:
 	uORB::Subscription	_mission_sub{ORB_ID(mission)};		/**< mission subscription */
 	mission_s		_mission {};
 
+	static constexpr uint32_t DATAMAN_CACHE_SIZE = 10;
+	DatamanCache _dataman_cache{"mission_dm_cache_miss", DATAMAN_CACHE_SIZE};
+	DatamanClient	&_dataman_client = _dataman_cache.client();
+	int32_t _load_mission_index{-1};
 	int32_t _current_mission_index{-1};
 
 	// track location of planned mission landing
@@ -349,6 +349,7 @@ private:
 	bool _inited{false};
 	bool _home_inited{false};
 	bool _need_mission_reset{false};
+	bool _need_mission_save{false};
 	bool _mission_waypoints_changed{false};
 	bool _mission_changed{false}; /** < true if the mission changed since the mission mode was active */
 
@@ -373,4 +374,5 @@ private:
 	mission_item_s _last_gimbal_control_item {};
 	mission_item_s _last_camera_mode_item {};
 	mission_item_s _last_camera_trigger_item {};
+	mission_item_s _last_speed_change_item {};
 };

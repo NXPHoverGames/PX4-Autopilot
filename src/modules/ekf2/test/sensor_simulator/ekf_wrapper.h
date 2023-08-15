@@ -102,6 +102,8 @@ public:
 	bool isIntendingMag3DFusion() const;
 	void setMagFuseTypeNone();
 	void enableMagStrengthCheck();
+	void enableMagInclinationCheck();
+	void enableMagCheckForceWMM();
 
 	bool isWindVelocityEstimated() const;
 
@@ -118,11 +120,11 @@ public:
 	matrix::Vector4f getQuaternionVariance() const;
 	int getQuaternionResetCounter() const;
 
-	matrix::Vector3f getDeltaVelBiasVariance() const;
-
 	void enableDragFusion();
 	void disableDragFusion();
 	void setDragFusionParameters(const float &bcoef_x, const float &bcoef_y, const float &mcoef);
+
+	float getMagHeadingNoise() const;
 
 private:
 	std::shared_ptr<Ekf> _ekf;

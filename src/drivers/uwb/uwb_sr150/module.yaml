@@ -88,5 +88,3 @@ parameters:
             39: ROTATION_PITCH_315
             40: ROTATION_ROLL_90_PITCH_315
           default: 0
-
-
