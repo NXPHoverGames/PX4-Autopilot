@@ -103,7 +103,6 @@ protected:
 	uORB::Publication<landing_target_innovations_s> _targetInnovationsPub{ORB_ID(landing_target_innovations)};
 	landing_target_innovations_s _target_innovations{};
 
-
 private:
 
 	enum class TargetMode {
@@ -165,7 +164,6 @@ private:
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 
-
 	uORB::Subscription _vehicleLocalPositionSub{ORB_ID(vehicle_local_position)};
 	uORB::Subscription _attitudeSub{ORB_ID(vehicle_attitude)};
 	uORB::Subscription _vehicle_acceleration_sub{ORB_ID(vehicle_acceleration)};
@@ -189,7 +187,7 @@ private:
 
 	matrix::Dcmf _R_att; //Orientation of the body frame
 	matrix::Dcmf _S_att; //Orientation of the sensor relative to body frame
-	//matrix::Vector2f _rel_pos;
+	// matrix::Vector2f _rel_pos;
 	KalmanFilter _kalman_filter_x;
 	KalmanFilter _kalman_filter_y;
 	hrt_abstime _last_predict{0}; // timestamp of last filter prediction
@@ -199,5 +197,6 @@ private:
 	void _check_params(const bool force);
 
 	void _update_state();
+
 };
 } // namespace landing_target_estimator

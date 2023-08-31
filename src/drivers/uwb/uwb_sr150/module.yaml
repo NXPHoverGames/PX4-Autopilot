@@ -88,3 +88,13 @@ parameters:
             39: ROTATION_PITCH_315
             40: ROTATION_ROLL_90_PITCH_315
           default: 0
+        UWB_VIS_OD:
+          description:
+            short: activates visual odometry publish
+            long: UWB sensor positioning in relation to Drone in NED. X offset. A Positive offset results in a Position o
+          type: enum
+          default: 1
+          values:
+            0: NO
+            1: YES
+

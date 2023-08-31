@@ -203,7 +203,6 @@ void LandingTargetEstimator::_update_topics()
 	_vehicleAttitude_valid = _attitudeSub.update(&_vehicleAttitude);
 	_vehicle_acceleration_valid = _vehicle_acceleration_sub.update(&_vehicle_acceleration);
 
-
 	if (_irlockReportSub.update(&_irlockReport)) { //
 
 		if (!_vehicleAttitude_valid || !_vehicleLocalPosition_valid || !_vehicleLocalPosition.dist_bottom_valid) {
@@ -249,6 +248,7 @@ void LandingTargetEstimator::_update_topics()
 		_new_irlockReport = true;
 
 	} else if (_sensorUwbSub.update(&_sensorUwb)) {
+
 		if (!_vehicleAttitude_valid || !_vehicleLocalPosition_valid) {
 			// don't have the data needed for an update
 			PX4_INFO("Attitude: %d, Local pos: %d", _vehicleAttitude_valid, _vehicleLocalPosition_valid);
@@ -267,10 +267,11 @@ void LandingTargetEstimator::_update_topics()
 			return;
 		}
 
-				if (aoa_limit  <= _sensorUwb.aoa_elevation_dev  || -aoa_limit  >= _sensorUwb.aoa_elevation_dev) {
+		if (aoa_limit  <= _sensorUwb.aoa_elevation_dev  || -aoa_limit  >= _sensorUwb.aoa_elevation_dev) {
 			return;
 		}
-		
+
+
 		_target_position_report.timestamp = _sensorUwb.timestamp;
 
 		/* ****** Position algorithm ************************************
@@ -340,6 +341,7 @@ void LandingTargetEstimator::_update_params()
 	param_get(_paramHandle.offset_x, &_params.offset_x);
 	param_get(_paramHandle.offset_y, &_params.offset_y);
 	param_get(_paramHandle.offset_z, &_params.offset_z);
+
 }
 
 void LandingTargetEstimator::parameters_update()
@@ -353,6 +355,4 @@ void LandingTargetEstimator::parameters_update()
 		updateParams();
 	}
 }
-
-
 } // namespace landing_target_estimator
