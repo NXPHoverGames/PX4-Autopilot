@@ -181,7 +181,6 @@ private:
 	bool _vehicleAttitude_valid{false};
 	bool _vehicle_acceleration_valid{false};
 	bool _new_irlockReport{false};
-	bool _new_sensorReport{false};
 	bool _estimator_initialized{false};
 	// keep track of whether last measurement was rejected
 	bool _faulty{false};

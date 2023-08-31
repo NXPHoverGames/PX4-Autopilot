@@ -204,7 +204,6 @@ void LandingTargetEstimator::_update_topics()
 	_vehicle_acceleration_valid = _vehicle_acceleration_sub.update(&_vehicle_acceleration);
 
 	if (_irlockReportSub.update(&_irlockReport)) { //
-		_new_irlockReport = true;
 
 		if (!_vehicleAttitude_valid || !_vehicleLocalPosition_valid || !_vehicleLocalPosition.dist_bottom_valid) {
 			// don't have the data needed for an update
@@ -246,7 +245,7 @@ void LandingTargetEstimator::_update_topics()
 		_target_position_report.rel_pos_x += _params.offset_x;
 		_target_position_report.rel_pos_y += _params.offset_y;
 
-		_new_sensorReport = true;
+		_new_irlockReport = true;
 
 	} else if (_sensorUwbSub.update(&_sensorUwb)) {
 
@@ -272,7 +271,7 @@ void LandingTargetEstimator::_update_topics()
 			return;
 		}
 
-		_new_sensorReport = true;
+
 		_target_position_report.timestamp = _sensorUwb.timestamp;
 
 		/* ****** Position algorithm ************************************
@@ -318,6 +317,7 @@ void LandingTargetEstimator::_update_topics()
 		_target_position_report.rel_pos_x = position(0);
 		_target_position_report.rel_pos_y = position(1);
 		_target_position_report.rel_pos_z = position(2);
+		_new_irlockReport = true;
 	}
 }
 
