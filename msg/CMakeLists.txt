@@ -87,6 +87,8 @@ set(msg_files
 	FigureEightStatus.msg
 	FailsafeFlags.msg
 	FailureDetectorStatus.msg
+	FiducialMarkerPosReport.msg
+	FiducialMarkerYawReport.msg
 	FlightPhaseEstimation.msg
 	FollowTarget.msg
 	FollowTargetEstimator.msg
@@ -167,6 +169,7 @@ set(msg_files
 	PowerButtonState.msg
 	PowerMonitor.msg
 	PpsCapture.msg
+	PrecLandStatus.msg
 	PurePursuitStatus.msg
 	PwmInput.msg
 	Px4ioStatus.msg
@@ -210,6 +213,7 @@ set(msg_files
 	SensorAirflow.msg
 	SystemPower.msg
 	TakeoffStatus.msg
+	TargetGnss.msg
 	TaskStackInfo.msg
 	TecsStatus.msg
 	TelemetryStatus.msg
@@ -236,6 +240,8 @@ set(msg_files
 	VehicleThrustSetpoint.msg
 	VehicleTorqueSetpoint.msg
 	VelocityLimits.msg
+	VisionTargetEstPosition.msg
+	VisionTargetEstOrientation.msg
 	WheelEncoders.msg
 	YawEstimatorStatus.msg
 	versioned/ActuatorMotors.msg
