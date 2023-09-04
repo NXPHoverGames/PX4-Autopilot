@@ -92,13 +92,13 @@ void LandingTargetEstimator::update()
 		}
 	}
 
-	if (!_new_sensorReport) {
+	if (!_new_irlockReport) {
 		// nothing to do
 		return;
 	}
 
 	// mark this sensor measurement as consumed
-	_new_sensorReport = false;
+	_new_irlockReport = false;
 
 
 	if (!_estimator_initialized) {
