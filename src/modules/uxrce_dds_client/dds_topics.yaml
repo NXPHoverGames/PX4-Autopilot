@@ -5,6 +5,9 @@
 #####
 publications:
 
+  - topic: /fmu/out/sensor_uwb
+    type: px4_msgs::msg::SensorUwb
+
   - topic: /fmu/out/collision_constraints
     type: px4_msgs::msg::CollisionConstraints
 
