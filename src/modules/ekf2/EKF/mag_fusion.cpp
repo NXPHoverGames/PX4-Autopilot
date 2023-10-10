@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2015 Estimation and Control Library (ECL). All rights reserved.
+ *   Copyright (c) 2015-2023 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,7 +12,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 3. Neither the name ECL nor the names of its contributors may be
+ * 3. Neither the name PX4 nor the names of its contributors may be
  *    used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -62,9 +62,9 @@ bool Ekf::fuseMag(const Vector3f &mag, estimator_aid_source3d_s &aid_src_mag, bo
 	Vector3f innov_var;
 
 	// Observation jacobian and Kalman gain vectors
-	SparseVector24f<0,1,2,3,16,17,18,19,20,21> Hfusion;
-	Vector24f H;
-	const Vector24f state_vector = getStateAtFusionHorizonAsVector();
+	SparseVectorState<0,1,2,3,16,17,18,19,20,21> Hfusion;
+	VectorState H;
+	const VectorState state_vector = getStateAtFusionHorizonAsVector();
 	sym::ComputeMagInnovInnovVarAndHx(state_vector, P, mag, R_MAG, FLT_EPSILON, &mag_innov, &innov_var, &H);
 	Hfusion = H;
 
@@ -76,7 +76,7 @@ bool Ekf::fuseMag(const Vector3f &mag, estimator_aid_source3d_s &aid_src_mag, bo
 
 		// we need to re-initialise covariances and abort this fusion step
 		if (update_all_states) {
-			resetQuatCov();
+			resetQuatCov(_params.mag_heading_noise);
 		}
 
 		resetMagCov();
@@ -94,7 +94,7 @@ bool Ekf::fuseMag(const Vector3f &mag, estimator_aid_source3d_s &aid_src_mag, bo
 
 		// we need to re-initialise covariances and abort this fusion step
 		if (update_all_states) {
-			resetQuatCov();
+			resetQuatCov(_params.mag_heading_noise);
 		}
 
 		resetMagCov();
@@ -111,7 +111,7 @@ bool Ekf::fuseMag(const Vector3f &mag, estimator_aid_source3d_s &aid_src_mag, bo
 
 		// we need to re-initialise covariances and abort this fusion step
 		if (update_all_states) {
-			resetQuatCov();
+			resetQuatCov(_params.mag_heading_noise);
 		}
 
 		resetMagCov();
@@ -132,8 +132,6 @@ bool Ekf::fuseMag(const Vector3f &mag, estimator_aid_source3d_s &aid_src_mag, bo
 		aid_src_mag.observation_variance[i] = R_MAG;
 		aid_src_mag.innovation[i] = mag_innov(i);
 	}
-
-	aid_src_mag.fusion_enabled = _control_status.flags.mag;
 
 	// do not use the synthesized measurement for the magnetomter Z component for 3D fusion
 	if (_control_status.flags.synthetic_mag_z) {
@@ -175,7 +173,7 @@ bool Ekf::fuseMag(const Vector3f &mag, estimator_aid_source3d_s &aid_src_mag, bo
 
 				// we need to re-initialise covariances and abort this fusion step
 				if (update_all_states) {
-					resetQuatCov();
+					resetQuatCov(_params.mag_heading_noise);
 				}
 
 				resetMagCov();
@@ -204,7 +202,7 @@ bool Ekf::fuseMag(const Vector3f &mag, estimator_aid_source3d_s &aid_src_mag, bo
 
 				// we need to re-initialise covariances and abort this fusion step
 				if (update_all_states) {
-					resetQuatCov();
+					resetQuatCov(_params.mag_heading_noise);
 				}
 
 				resetMagCov();
@@ -214,7 +212,7 @@ bool Ekf::fuseMag(const Vector3f &mag, estimator_aid_source3d_s &aid_src_mag, bo
 			}
 		}
 
-		Vector24f Kfusion = P * Hfusion / aid_src_mag.innovation_variance[index];
+		VectorState Kfusion = P * Hfusion / aid_src_mag.innovation_variance[index];
 
 		if (!update_all_states) {
 			for (unsigned row = 0; row <= 15; row++) {
@@ -254,114 +252,6 @@ bool Ekf::fuseMag(const Vector3f &mag, estimator_aid_source3d_s &aid_src_mag, bo
 	return false;
 }
 
-// update quaternion states and covariances using the yaw innovation and yaw observation variance
-bool Ekf::fuseYaw(estimator_aid_source1d_s &aid_src_status)
-{
-	Vector24f H_YAW;
-	computeYawInnovVarAndH(aid_src_status.observation_variance, aid_src_status.innovation_variance, H_YAW);
-
-	return fuseYaw(aid_src_status, H_YAW);
-}
-
-bool Ekf::fuseYaw(estimator_aid_source1d_s &aid_src_status, const Vector24f &H_YAW)
-{
-	// define the innovation gate size
-	float gate_sigma = math::max(_params.heading_innov_gate, 1.f);
-
-	// innovation test ratio
-	setEstimatorAidStatusTestRatio(aid_src_status, gate_sigma);
-
-	if (aid_src_status.fusion_enabled) {
-
-		// check if the innovation variance calculation is badly conditioned
-		if (aid_src_status.innovation_variance >= aid_src_status.observation_variance) {
-			// the innovation variance contribution from the state covariances is not negative, no fault
-			_fault_status.flags.bad_hdg = false;
-
-		} else {
-			// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
-			_fault_status.flags.bad_hdg = true;
-
-			// we reinitialise the covariance matrix and abort this fusion step
-			initialiseCovariance();
-			ECL_ERR("yaw fusion numerical error - covariance reset");
-
-			return false;
-		}
-
-		// calculate the Kalman gains
-		// only calculate gains for states we are using
-		Vector24f Kfusion;
-		const float heading_innov_var_inv = 1.f / aid_src_status.innovation_variance;
-
-		for (uint8_t row = 0; row < _k_num_states; row++) {
-			for (uint8_t col = 0; col <= 3; col++) {
-				Kfusion(row) += P(row, col) * H_YAW(col);
-			}
-
-			Kfusion(row) *= heading_innov_var_inv;
-		}
-
-		// set the magnetometer unhealthy if the test fails
-		if (aid_src_status.innovation_rejected) {
-			_innov_check_fail_status.flags.reject_yaw = true;
-
-			// if we are in air we don't want to fuse the measurement
-			// we allow to use it when on the ground because the large innovation could be caused
-			// by interference or a large initial gyro bias
-			if (!_control_status.flags.in_air
-			    && isTimedOut(_time_last_in_air, (uint64_t)5e6)
-			    && isTimedOut(aid_src_status.time_last_fuse, (uint64_t)1e6)
-			   ) {
-				// constrain the innovation to the maximum set by the gate
-				// we need to delay this forced fusion to avoid starting it
-				// immediately after touchdown, when the drone is still armed
-				float gate_limit = sqrtf((sq(gate_sigma) * aid_src_status.innovation_variance));
-				aid_src_status.innovation = math::constrain(aid_src_status.innovation, -gate_limit, gate_limit);
-
-				// also reset the yaw gyro variance to converge faster and avoid
-				// being stuck on a previous bad estimate
-				resetGyroBiasZCov();
-
-			} else {
-				return false;
-			}
-
-		} else {
-			_innov_check_fail_status.flags.reject_yaw = false;
-		}
-
-		if (measurementUpdate(Kfusion, aid_src_status.innovation_variance, aid_src_status.innovation)) {
-
-			_time_last_heading_fuse = _time_delayed_us;
-
-			aid_src_status.time_last_fuse = _time_delayed_us;
-			aid_src_status.fused = true;
-
-			_fault_status.flags.bad_hdg = false;
-
-			return true;
-
-		} else {
-			_fault_status.flags.bad_hdg = true;
-		}
-	}
-
-	// otherwise
-	aid_src_status.fused = false;
-	return false;
-}
-
-void Ekf::computeYawInnovVarAndH(float variance, float &innovation_variance, Vector24f &H_YAW) const
-{
-	if (shouldUse321RotationSequence(_R_to_earth)) {
-		sym::ComputeYaw321InnovVarAndH(getStateAtFusionHorizonAsVector(), P, variance, FLT_EPSILON, &innovation_variance, &H_YAW);
-
-	} else {
-		sym::ComputeYaw312InnovVarAndH(getStateAtFusionHorizonAsVector(), P, variance, FLT_EPSILON, &innovation_variance, &H_YAW);
-	}
-}
-
 bool Ekf::fuseDeclination(float decl_sigma)
 {
 	if (!_control_status.flags.mag) {
@@ -371,7 +261,7 @@ bool Ekf::fuseDeclination(float decl_sigma)
 	// observation variance (rad**2)
 	const float R_DECL = sq(decl_sigma);
 
-	Vector24f H;
+	VectorState H;
 	float decl_pred;
 	float innovation_variance;
 
@@ -385,10 +275,10 @@ bool Ekf::fuseDeclination(float decl_sigma)
 		return false;
 	}
 
-	SparseVector24f<16,17> Hfusion(H);
+	SparseVectorState<16,17> Hfusion(H);
 
 	// Calculate the Kalman gains
-	Vector24f Kfusion = P * Hfusion / innovation_variance;
+	VectorState Kfusion = P * Hfusion / innovation_variance;
 
 	const bool is_fused = measurementUpdate(Kfusion, innovation_variance, innovation);
 

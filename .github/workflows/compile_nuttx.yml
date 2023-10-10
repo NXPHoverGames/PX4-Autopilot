@@ -75,7 +75,8 @@ jobs:
           raspberrypi_pico,
           sky-drones_smartap-airlink,
           spracing_h7extreme,
-          uvify_core
+          uvify_core,
+          siyi_n7
           ]
     steps:
     - uses: actions/checkout@v1

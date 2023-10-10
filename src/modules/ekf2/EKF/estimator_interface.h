@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2015-2020 Estimation and Control Library (ECL). All rights reserved.
+ *   Copyright (c) 2015-2023 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,7 +12,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 3. Neither the name ECL nor the names of its contributors may be
+ * 3. Neither the name PX4 nor the names of its contributors may be
  *    used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -86,11 +86,15 @@ public:
 
 	void setIMUData(const imuSample &imu_sample);
 
+#if defined(CONFIG_EKF2_MAGNETOMETER)
 	void setMagData(const magSample &mag_sample);
+#endif // CONFIG_EKF2_MAGNETOMETER
 
 	void setGpsData(const gpsMessage &gps);
 
+#if defined(CONFIG_EKF2_BAROMETER)
 	void setBaroData(const baroSample &baro_sample);
+#endif // CONFIG_EKF2_BAROMETER
 
 #if defined(CONFIG_EKF2_AIRSPEED)
 	void setAirspeedData(const airspeedSample &airspeed_sample);
@@ -224,12 +228,14 @@ public:
 	int getNumberOfActiveVerticalVelocityAidingSources() const;
 
 	const matrix::Quatf &getQuaternion() const { return _output_predictor.getQuaternion(); }
+	float getUnaidedYaw() const { return _output_predictor.getUnaidedYaw(); }
 	Vector3f getVelocity() const { return _output_predictor.getVelocity(); }
 	const Vector3f &getVelocityDerivative() const { return _output_predictor.getVelocityDerivative(); }
 	float getVerticalPositionDerivative() const { return _output_predictor.getVerticalPositionDerivative(); }
 	Vector3f getPosition() const { return _output_predictor.getPosition(); }
 	const Vector3f &getOutputTrackingError() const { return _output_predictor.getOutputTrackingError(); }
 
+#if defined(CONFIG_EKF2_MAGNETOMETER)
 	// Get the value of magnetic declination in degrees to be saved for use at the next startup
 	// Returns true when the declination can be saved
 	// At the next startup, set param.mag_declination_deg to the value saved
@@ -262,6 +268,7 @@ public:
 		strength_gs = _mag_strength;
 		strength_ref_gs = _mag_strength_gps;
 	}
+#endif // CONFIG_EKF2_MAGNETOMETER
 
 	// get EKF mode status
 	const filter_control_status_u &control_status() const { return _control_status; }
@@ -375,8 +382,8 @@ protected:
 	bool _initialised{false};      // true if the ekf interface instance (data buffering) is initialized
 
 	bool _NED_origin_initialised{false};
-	float _gps_origin_eph{0.0f}; // horizontal position uncertainty of the GPS origin
-	float _gps_origin_epv{0.0f}; // vertical position uncertainty of the GPS origin
+	float _gpos_origin_eph{0.0f}; // horizontal position uncertainty of the global origin
+	float _gpos_origin_epv{0.0f}; // vertical position uncertainty of the global origin
 	MapProjection _pos_ref{}; // Contains WGS-84 position latitude and longitude of the EKF origin
 	MapProjection _gps_pos_prev{}; // Contains WGS-84 position latitude and longitude of the previous GPS message
 	float _gps_alt_prev{0.0f};	// height from the previous GPS message (m)
@@ -411,8 +418,11 @@ protected:
 	RingBuffer<imuSample> _imu_buffer{kBufferLengthDefault};
 
 	RingBuffer<gpsSample> *_gps_buffer{nullptr};
+
+#if defined(CONFIG_EKF2_MAGNETOMETER)
 	RingBuffer<magSample> *_mag_buffer{nullptr};
-	RingBuffer<baroSample> *_baro_buffer{nullptr};
+	uint64_t _time_last_mag_buffer_push{0};
+#endif // CONFIG_EKF2_MAGNETOMETER
 
 #if defined(CONFIG_EKF2_AIRSPEED)
 	RingBuffer<airspeedSample> *_airspeed_buffer{nullptr};
@@ -428,8 +438,11 @@ protected:
 	RingBuffer<systemFlagUpdate> *_system_flag_buffer{nullptr};
 
 	uint64_t _time_last_gps_buffer_push{0};
-	uint64_t _time_last_mag_buffer_push{0};
+
+#if defined(CONFIG_EKF2_BAROMETER)
+	RingBuffer<baroSample> *_baro_buffer{nullptr};
 	uint64_t _time_last_baro_buffer_push{0};
+#endif // CONFIG_EKF2_BAROMETER
 
 	uint64_t _time_last_gnd_effect_on{0};
 

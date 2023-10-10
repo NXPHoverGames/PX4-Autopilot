@@ -193,7 +193,6 @@
 #define GPIO_SPIX_SYNC_OFF                   _PIN_OFF(GPIO_SPIX_SYNC)
 
 
-
 #define ADC_IOMUX (IOMUX_PULL_NONE )
 
 #define ADC1_CH(n)                  (n)
@@ -352,9 +351,11 @@
 #define GPIO_VDD_3V3_SPEKTRUM_POWER_EN  /* GPIO_EMC_B1_38 GPIO2_IO06 */ (GPIO_PORT2 | GPIO_PIN6  | GPIO_OUTPUT | GPIO_OUTPUT_ZERO | GENERAL_OUTPUT_IOMUX)
 #define GPIO_VDD_3V3_SD_CARD_EN         /* GPIO_EMC_B1_01 GPIO1_IO1  */ (GPIO_PORT1 | GPIO_PIN1  | GPIO_OUTPUT | GPIO_OUTPUT_ZERO |GENERAL_OUTPUT_IOMUX)
 
+
 /* Spare GPIO */
 
 #define GPIO_GPIO_EMC_B1_09             /* GPIO_EMC_B1_09 GPIO1_IO09  */ (GPIO_PORT1 | GPIO_PIN9  | GPIO_INPUT |  GENERAL_INPUT_IOMUX)
+
 
 /* ETHERNET GPIO */
 
@@ -371,6 +372,9 @@
 /* NFC GPIO */
 
 #define GPIO_NFC_GPIO                  /* GPIO_EMC_B1_04 GPIO1_IO04 */ (GPIO_PORT1 | GPIO_PIN4  | GPIO_INPUT |  GENERAL_INPUT_IOMUX)
+
+
+#define GPIO_GPIO_EMC_B2_12           /* GPIO_EMC_B2_12 AKA PD15, PH11 */  (GPIO_PORT2 | GPIO_PIN22 | GPIO_INPUT | GENERAL_INPUT_IOMUX)
 
 
 
@@ -434,7 +438,8 @@
 #define HRT_PPM_CHANNEL         /* GPIO_EMC_B1_09 GPIO_GPT5_CAPTURE1_1 */  1  /* use capture/compare channel 1 */
 #define GPIO_PPM_IN             /* GPIO_EMC_B1_09 GPT1_CAPTURE2 */ (GPIO_GPT5_CAPTURE1_1 | GENERAL_INPUT_IOMUX)
 
-#define RC_SERIAL_PORT          "/dev/ttyS5"
+
+#define RC_SERIAL_PORT          "/dev/ttyS4"
 #define RC_SERIAL_SINGLEWIRE
 
 /* FLEXSPI4 */
@@ -569,6 +574,7 @@
 		GPIO_ETH_POWER_EN,                \
 		GPIO_ETH_PHY_nINT,                \
 		GPIO_GPIO_EMC_B1_09,              \
+		GPIO_GPIO_EMC_B2_12,              \
 		GPIO_NFC_GPIO,                    \
 		GPIO_TONE_ALARM_IDLE,             \
 		GPIO_nSAFETY_SWITCH_LED_OUT_INIT, \
