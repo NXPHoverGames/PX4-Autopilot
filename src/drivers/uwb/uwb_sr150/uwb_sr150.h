@@ -50,7 +50,6 @@
 #include <uORB/SubscriptionCallback.hpp>
 #include <uORB/SubscriptionInterval.hpp>
 #include <uORB/topics/sensor_uwb.h>
-#include <uORB/topics/vehicle_odometry.h>
 #include <uORB/topics/parameter_update.h>
 
 #include <matrix/math.hpp>
@@ -122,7 +121,6 @@ private:
 
 	// Publications
 	uORB::Publication<sensor_uwb_s> _sensor_uwb_pub{ORB_ID(sensor_uwb)};
-	uORB::Publication<vehicle_odometry_s> _vehicle_odometry_pub{ORB_ID(vehicle_odometry)};
 
 	// Subscriptions
 	uORB::SubscriptionCallbackWorkItem _sensor_uwb_sub{this, ORB_ID(sensor_uwb)};
@@ -134,15 +132,13 @@ private:
 		(ParamFloat<px4::params::UWB_INIT_OFF_X>) 		_offset_x,
 		(ParamFloat<px4::params::UWB_INIT_OFF_Y>) 		_offset_y,
 		(ParamFloat<px4::params::UWB_INIT_OFF_Z>) 		_offset_z,
-		(ParamInt<px4::params::UWB_SENS_ROT>) 			_sensor_rot,
-		(ParamInt<px4::params::UWB_VIS_OD>)			_visual_odometry
+		(ParamInt<px4::params::UWB_SENS_ROT>) 			_sensor_rot
 	)
 	// Performance (perf) counters
 	perf_counter_t _read_count_perf;
 	perf_counter_t _read_err_perf;
 
 	sensor_uwb_s _sensor_uwb{};
-	vehicle_odometry_s _vehicle_odometry{};
 
 	char _port[20] {};
 	hrt_abstime param_timestamp{0};

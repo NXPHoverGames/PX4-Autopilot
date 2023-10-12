@@ -62,9 +62,6 @@ private:
 		vehicle_odometry_s odom;
 
 		if (_vehicle_odometry_sub.update(&odom)) {
-			if(odom.reset_counter != 0){//needs to be  removed, before merge, only here to filter out non UWB msgs
-				return false;
-			}
 			mavlink_odometry_t msg{};
 			msg.time_usec = odom.timestamp_sample;
 
