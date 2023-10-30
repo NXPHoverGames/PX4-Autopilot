@@ -107,9 +107,15 @@ void RtlDirect::on_active()
 	if (_rtl_state == RTLState::LAND && _param_rtl_pld_md.get() > 0) {
 		// Need to update the position and type on the current setpoint triplet.
 		_navigator->get_precland()->on_active();
+#if !defined(CONSTRAINED_FLASH)
+		_publish_prec_land_status(true);
+#endif
 
 	} else if (_navigator->get_precland()->is_activated()) {
 		_navigator->get_precland()->on_inactivation();
+#if !defined(CONSTRAINED_FLASH)
+		_publish_prec_land_status(false);
+#endif
 	}
 }
 
@@ -510,3 +516,48 @@ loiter_point_s RtlDirect::sanitizeLandApproach(loiter_point_s land_approach) con
 
 	return sanitized_land_approach;
 }
+
+void RtlDirect::publish_rtl_direct_navigator_mission_item()
+{
+	navigator_mission_item_s navigator_mission_item{};
+
+	navigator_mission_item.sequence_current = static_cast<uint16_t>(_rtl_state);
+	navigator_mission_item.nav_cmd = _mission_item.nav_cmd;
+	navigator_mission_item.latitude = _mission_item.lat;
+	navigator_mission_item.longitude = _mission_item.lon;
+	navigator_mission_item.altitude = _mission_item.altitude;
+
+	navigator_mission_item.time_inside = get_time_inside(_mission_item);
+	navigator_mission_item.acceptance_radius = _mission_item.acceptance_radius;
+	navigator_mission_item.loiter_radius = _mission_item.loiter_radius;
+	navigator_mission_item.yaw = _mission_item.yaw;
+
+	navigator_mission_item.frame = _mission_item.frame;
+	navigator_mission_item.frame = _mission_item.origin;
+
+	navigator_mission_item.loiter_exit_xtrack = _mission_item.loiter_exit_xtrack;
+	navigator_mission_item.force_heading = _mission_item.force_heading;
+	navigator_mission_item.altitude_is_relative = _mission_item.altitude_is_relative;
+	navigator_mission_item.autocontinue = _mission_item.autocontinue;
+	navigator_mission_item.vtol_back_transition = _mission_item.vtol_back_transition;
+
+	navigator_mission_item.timestamp = hrt_absolute_time();
+
+	_navigator_mission_item_pub.publish(navigator_mission_item);
+}
+#if !defined(CONSTRAINED_FLASH)
+void RtlDirect::_publish_prec_land_status(const bool prec_land_ongoing)
+{
+	prec_land_status_s prec_land_status{};
+
+	if (prec_land_ongoing) {
+		prec_land_status.state = prec_land_status_s::PREC_LAND_STATE_ONGOING;
+
+	} else {
+		prec_land_status.state = prec_land_status_s::PREC_LAND_STATE_STOPPED;
+	}
+
+	prec_land_status.nav_state = (int)_navigator->get_precland()->get_prec_land_nav_state();
+	_prec_land_status_pub.publish(prec_land_status);
+}
+#endif
