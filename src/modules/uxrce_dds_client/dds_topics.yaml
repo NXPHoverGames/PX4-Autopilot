@@ -5,6 +5,12 @@
 #####
 publications:
 
+  - topic: /fmu/out/battery_status
+    type: px4_msgs::msg::BatteryStatus
+
+  - topic: /fmu/out/sensor_uwb
+    type: px4_msgs::msg::SensorUwb
+
   - topic: /fmu/out/collision_constraints
     type: px4_msgs::msg::CollisionConstraints
 
