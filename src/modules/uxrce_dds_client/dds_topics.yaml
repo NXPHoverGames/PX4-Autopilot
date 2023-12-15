@@ -5,6 +5,12 @@
 #####
 publications:
 
+  - topic: /fmu/out/sensor_uwb
+    type: px4_msgs::msg::SensorUwb
+
+  - topic: /fmu/out/vehicle_thrust_setpoint
+    type: px4_msgs::msg::VehicleThrustSetpoint
+
   - topic: /fmu/out/register_ext_component_reply
     type: px4_msgs::msg::RegisterExtComponentReply
 
