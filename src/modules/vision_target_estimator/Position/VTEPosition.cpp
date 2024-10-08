@@ -423,9 +423,9 @@ bool VTEPosition::processObsUwb(const sensor_uwb_s &uwb_report, targetObsPos &ob
 	const float distance = uwb_report.distance;
 
 	// Calculate the relative position components
-	const float delta_x = distance * cosf(phi_rad) * cosf(theta_rad);
+	const float delta_z = -distance * cosf(phi_rad) * cosf(theta_rad);
 	const float delta_y = distance * cosf(phi_rad) * sinf(theta_rad);
-	const float delta_z = -distance * sinf(phi_rad); // Negative because Z is down in NED
+	const float delta_x = -distance * sinf(phi_rad); // Negative because Z is down in NED
 
 	// Total position in NED frame
 	const Vector3f pos_ned(uwb_report.offset_x + delta_x, uwb_report.offset_y + delta_y, uwb_report.offset_z + delta_z);
@@ -451,9 +451,7 @@ bool VTEPosition::processObsUwb(const sensor_uwb_s &uwb_report, targetObsPos &ob
 	obs.type = ObservationType::uwb;
 	obs.updated = true;
 
-
-	// TODO: fix function and then return true.
-	return false;
+	return true;
 }
 
 
