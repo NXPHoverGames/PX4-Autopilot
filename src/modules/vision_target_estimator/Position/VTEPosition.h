@@ -190,9 +190,9 @@ private:
 		USE_TARGET_GPS_POS  = (1 << 0),    ///< set to true to use target GPS position data
 		USE_UAV_GPS_VEL     = (1 << 1),    ///< set to true to use drone GPS velocity data
 		USE_EXT_VIS_POS 	= (1 << 2),    ///< set to true to use target external vision-based relative position data
-		USE_MISSION_POS     = (1 << 3),    ///< set to true to use the PX4 mission position
-		USE_TARGET_GPS_VEL  = (1 << 4),		///< set to true to use target GPS velocity data. Only for moving targets.
-		USE_UWB = (1 << 5) ///< set to true to use UWB.
+		USE_MISSION_POS     = 	(1 << 3),    ///< set to true to use the PX4 mission position
+		USE_TARGET_GPS_VEL  = 	(1 << 4),		///< set to true to use target GPS velocity data. Only for moving targets.
+		USE_UWB = 		(1 << 5) ///< set to true to use UWB.
 	};
 
 	enum ObservationValidMask : uint8_t {
