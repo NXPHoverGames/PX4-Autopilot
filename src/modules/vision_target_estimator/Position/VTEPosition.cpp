@@ -399,8 +399,15 @@ void VTEPosition::handleUwbData(ObservationValidMask &vte_fusion_aid_mask, targe
 
 bool VTEPosition::isUwbDataValid(const sensor_uwb_s &uwb_report)
 {
+	const float aoa_limit = 60.0;
+	// First we need to catch angle measurements outside of the useable measuring range
+	// UWB AoA measurements are valid between -60.00° and +60.00°
 
-	// TODO: extend checks
+	if (aoa_limit  <= uwb_report.aoa_azimuth_dev || -aoa_limit  >= uwb_report.aoa_azimuth_dev ||
+		aoa_limit  <= uwb_report.aoa_elevation_dev  || -aoa_limit  >= uwb_report.aoa_elevation_dev) {
+		return 0;
+	}
+
 	return _is_meas_valid(uwb_report.timestamp);
 
 }
@@ -422,18 +429,22 @@ bool VTEPosition::processObsUwb(const sensor_uwb_s &uwb_report, targetObsPos &ob
 
 	// Total position in NED frame
 	const Vector3f pos_ned(uwb_report.offset_x + delta_x, uwb_report.offset_y + delta_y, uwb_report.offset_z + delta_z);
-
+	// PX4_INFO("UWB xyz: %f, %f, %f", static_cast<double>(delta_x), static_cast<double>(delta_y), static_cast<double>(delta_z));
 	obs.meas_xyz = pos_ned;
 
 	obs.meas_h_xyz(Direction::x, vtest::State::pos_rel) = 1;
 	obs.meas_h_xyz(Direction::y, vtest::State::pos_rel) = 1;
 	obs.meas_h_xyz(Direction::z, vtest::State::pos_rel) = 1;
 
-	const float unc = math::max(math::min(distance / 20.f, 2.f), 0.1f);
-
+	// Variance of UWB Distance measurements is +/- 5 cm
+	// Variance of UWB Angle of Arrival measurements is +/- 3° Degree
+	// Rough Variance
+	const float unc = math::sq(distance * 0.02f) + 0.0004f;
 	obs.meas_unc_xyz(Direction::x) = unc;
 	obs.meas_unc_xyz(Direction::y) = unc;
 	obs.meas_unc_xyz(Direction::z) = unc;
+
+
 
 	obs.timestamp = uwb_report.timestamp;
 
