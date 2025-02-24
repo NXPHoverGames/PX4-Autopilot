@@ -167,7 +167,6 @@ set(msg_files
 	PowerButtonState.msg
 	PowerMonitor.msg
 	PpsCapture.msg
-	PrecLandStatus.msg
 	PurePursuitStatus.msg
 	PwmInput.msg
 	Px4ioStatus.msg
