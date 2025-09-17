@@ -371,9 +371,8 @@ bool VTEPosition::processObsUwb(const sensor_uwb_s &uwb_report, targetObs &obs)
 	Vector3f pos_ned(uwb_report.offset_x + delta_x, uwb_report.offset_y + delta_y, uwb_report.offset_z + delta_z);
 
 	//Rotate UWB
-	const matrix::Quaternion<float> q_to_ned_uwb(0.0f, 0.7071068f, 0.0f, 0.7071068f); //NED rotation for UWB
 	matrix::Quaternion<float> q_att(&_vehicle_attitude.q[0]);
-	matrix::Quaternion<float> q_rotation = q_att * q_to_ned_uwb * get_rot_quaternion(static_cast<enum Rotation>(uwb_report.orientation));
+	matrix::Quaternion<float> q_rotation = q_att * get_rot_quaternion(static_cast<enum Rotation>(uwb_report.orientation));
 	// rotate the unit ray into the navigation frame
 	pos_ned = q_rotation.rotateVector(pos_ned);
 
