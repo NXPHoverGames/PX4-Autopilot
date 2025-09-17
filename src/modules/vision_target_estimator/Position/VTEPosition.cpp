@@ -276,6 +276,8 @@ bool VTEPosition::updateStep(const Vector3f &vehicle_acc_ned)
 
 void VTEPosition::processObservations(ObsValidMask &vte_fusion_aid_mask, targetObs obs[ObsType::Type_count])
 {
+	_vehicle_attitude_sub.update(&_vehicle_attitude); //Could be checked for validity
+
 	handleVisionData(vte_fusion_aid_mask, obs[ObsType::Fiducial_marker]);
 
 	handleUwbData(vte_fusion_aid_mask, obs[ObsType::Uwb]);
@@ -338,7 +340,7 @@ void VTEPosition::handleUwbData(ObsValidMask &vte_fusion_aid_mask, targetObs &ob
 
 bool VTEPosition::isUwbDataValid(const sensor_uwb_s &uwb_report)
 {
-	if (!isMeasValid(uwb_report.timestamp)) {
+	if (!isMeasValid(uwb_report.timestamp) || !PX4_ISFINITE(uwb_report.distance)) {
 		return false;
 	}
 
@@ -366,7 +368,14 @@ bool VTEPosition::processObsUwb(const sensor_uwb_s &uwb_report, targetObs &obs)
 	const float delta_x = -distance * sinf(phi_rad);
 
 	// Total position in NED frame
-	const Vector3f pos_ned(uwb_report.offset_x + delta_x, uwb_report.offset_y + delta_y, uwb_report.offset_z + delta_z);
+	Vector3f pos_ned(uwb_report.offset_x + delta_x, uwb_report.offset_y + delta_y, uwb_report.offset_z + delta_z);
+
+	//Rotate UWB
+	const matrix::Quaternion<float> q_to_ned_uwb(0.0f, 0.7071068f, 0.0f, 0.7071068f); //NED rotation for UWB
+	matrix::Quaternion<float> q_att(&_vehicle_attitude.q[0]);
+	matrix::Quaternion<float> q_rotation = q_att * q_to_ned_uwb * get_rot_quaternion(static_cast<enum Rotation>(uwb_report.orientation));
+	// rotate the unit ray into the navigation frame
+	pos_ned = q_rotation.rotateVector(pos_ned);
 
 	obs.meas_xyz = pos_ned;
 

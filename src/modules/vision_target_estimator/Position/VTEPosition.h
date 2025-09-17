@@ -135,6 +135,8 @@ protected:
 	static constexpr double lon_abs_max_deg = 180.0;
 	static constexpr float alt_min_m = -350.f;
 	static constexpr float alt_max_m = 10000.f;
+	/* minimum angle for target yaw estimation sqrd*/
+	static constexpr float min_angle_for_target_yaw_estimation_sqrd = 0.1f * 0.1f;
 
 	uORB::Publication<landing_target_pose_s> _targetPosePub{ORB_ID(landing_target_pose)};
 	uORB::Publication<vision_target_est_position_s> _targetEstimatorStatePub{ORB_ID(vision_target_est_position)};
@@ -281,6 +283,7 @@ private:
 	void publishInnov(const estimator_aid_source3d_s &target_innov, const ObsType type);
 
 	uORB::Subscription _vehicle_gps_position_sub{ORB_ID(vehicle_gps_position)};
+	uORB::Subscription _vehicle_attitude_sub{ORB_ID(vehicle_attitude)};
 	uORB::Subscription _fiducial_marker_report_sub{ORB_ID(fiducial_marker_pos_report)};
 	uORB::Subscription _target_gnss_sub{ORB_ID(target_gnss)};
 	uORB::Subscription _sensor_uwb_sub{ORB_ID(sensor_uwb)};
@@ -308,6 +311,7 @@ private:
 
 	globalPos _mission_land_position{};
 	globalPos _uav_gps_position{};
+	vehicle_attitude_s _vehicle_attitude{};
 
 	struct velStamped {
 		hrt_abstime timestamp = 0;
